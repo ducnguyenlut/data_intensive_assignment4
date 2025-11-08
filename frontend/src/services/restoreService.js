@@ -9,7 +9,7 @@ export const restoreDatabase = async (dbName) => {
 
 // Restore all DBs
 export const restoreAllDatabases = async () => {
-  const dbs = ["db1", "db2", "db3"];
+  const dbs = ["nosql"];
   const results = [];
   for (let db of dbs) {
     const res = await restoreDatabase(db);

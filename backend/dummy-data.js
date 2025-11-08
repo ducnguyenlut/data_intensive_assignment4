@@ -1,4 +1,3 @@
-// Replicated + Fragmented Dummy Data for MongoDB Database (only db1)
 // Collections: users, products, categories, orders, reviews
 
 const users = [

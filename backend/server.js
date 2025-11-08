@@ -7,7 +7,7 @@ app.use(cors());
 app.use(express.json());
 
 // Connect to the single MongoDB database
-const db1 = mongoose.createConnection('mongodb://mongodb:27017/nosql');
+const nosql = mongoose.createConnection('mongodb://mongodb:27017/nosql');
 
 // Import schemas
 const userSchema = require('./models/User');
@@ -18,12 +18,12 @@ const reviewSchema = require('./models/Review');
 
 // Create models for the DB
 const models = {
-    db1: {
-        User: db1.model('User', userSchema),
-        Product: db1.model('Product', productSchema),
-        Category: db1.model('Category', categorySchema),
-        Order: db1.model('Order', orderSchema),
-        Review: db1.model('Review', reviewSchema),
+    nosql: {
+        User: nosql.model('User', userSchema),
+        Product: nosql.model('Product', productSchema),
+        Category: nosql.model('Category', categorySchema),
+        Order: nosql.model('Order', orderSchema),
+        Review: nosql.model('Review', reviewSchema),
     }
 };
 
@@ -63,6 +63,27 @@ app.get('/:db/:collection', selectDB, async (req, res) => {
     }
 });
 
+// Create new user with auto-increment _id
+app.post('/:dbName/users', async (req, res) => {
+  const { dbName } = req.params;
+  const { name, email, age } = req.body;
+
+  try {
+    const UserModel = models[dbName].User;
+
+    // Compute next _id by finding the max existing _id
+    const lastUser = await UserModel.findOne().sort({ _id: -1 }).lean();
+    const nextId = lastUser ? lastUser._id + 1 : 1;
+
+    const newUser = await UserModel.create({ _id: nextId, name, email, age });
+
+    res.json(newUser);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Failed to create user');
+  }
+});
+
 // Update a single item by _id
 app.put('/:db/:collection/:id', selectDB, async (req, res) => {
     const collection = req.params.collection;
@@ -90,6 +111,32 @@ app.put('/:db/:collection/:id', selectDB, async (req, res) => {
     }
 });
 
+// Delete a single item by _id
+app.delete('/:db/:collection/:id', selectDB, async (req, res) => {
+    const collection = req.params.collection;
+    const id = req.params.id;
+
+    const collectionMap = {
+        users: 'User',
+        products: 'Product',
+        categories: 'Category',
+        orders: 'Order',
+        reviews: 'Review'
+    };
+
+    const Model = req.db[collectionMap[collection]];
+    if (!Model) return res.status(400).send('Invalid collection');
+
+    try {
+        const deleted = await Model.findByIdAndDelete(id);
+        if (!deleted) return res.status(404).send('Item not found');
+        res.json({ message: `Deleted ${collection} with id ${id}` });
+    } catch (err) {
+        console.error("Delete error:", err);
+        res.status(500).send("Server error");
+    }
+});
+
 // Import dummy data
 const { users, products, categories, orders, reviews } = require("./dummy-data");
 
@@ -108,7 +155,7 @@ app.post('/:db/restore', selectDB, async (req, res) => {
     await Models.Order.insertMany(orders);
     await Models.Review.insertMany(reviews);
 
-    res.json({ message: `db1 restored successfully` });
+    res.json({ message: `nosql restored successfully` });
   } catch (err) {
     console.error("Restore error:", err);
     res.status(500).send("Failed to restore database");

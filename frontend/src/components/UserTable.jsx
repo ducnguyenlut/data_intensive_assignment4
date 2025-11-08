@@ -1,14 +1,23 @@
 import { useState } from "react";
 import UserEditAlert from "../alert_ui/UserEditAlert";
 import { DB_NAMES } from "../config/dbNames";
+import ConfirmDeleteAlert from "../alert_ui/ConfirmDeleteAlert";
 
-export default function UserTable({ dbName, users = [], onUpdate, onDBChange }) {
+export default function UserTable({ dbName, users = [], onUpdate, onDBChange, onDelete, onInsert }) {
   const [editingUser, setEditingUser] = useState(null);
+  const [deletingUser, setDeletingUser] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
 
   const handleDBSelect = (db) => {
     setShowDropdown(false);
     onDBChange && onDBChange(db);
+  };
+  
+  const handleConfirmDelete = () => {
+    if (onDelete && deletingUser) {
+      onDelete(deletingUser);
+      setDeletingUser(null);
+    }
   };
 
   return (
@@ -91,6 +100,23 @@ export default function UserTable({ dbName, users = [], onUpdate, onDBChange }) 
             </div>
           )}
         </div>
+
+        {/* Insert Button */}
+        <button
+          onClick={() => setEditingUser({})} // empty object to trigger insert modal
+          style={{
+            backgroundColor: "#28a745", // green color
+            color: "white",
+            border: "none",
+            padding: "6px 12px",
+            borderRadius: "4px",
+            cursor: "pointer",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#218838")}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#28a745")}
+        >
+          Insert
+        </button>
       </div>
 
       {/* Table Section */}
@@ -111,13 +137,13 @@ export default function UserTable({ dbName, users = [], onUpdate, onDBChange }) 
           >
             <thead>
               <tr>
-                {["ID", "Name", "Email", "Age", "Action"].map((header) => (
+                {["ID", "Name", "Email", "Age", " ", " "].map((header) => (
                   <th
                     key={header}
                     style={{
                       borderBottom: "1px solid #444",
                       padding: "8px",
-                      textAlign: "left",
+                      textAlign: "center",
                       color: "#ffcc00",
                     }}
                   >
@@ -176,6 +202,27 @@ export default function UserTable({ dbName, users = [], onUpdate, onDBChange }) 
                       Edit
                     </button>
                   </td>
+                  <td style={{ padding: "8px", borderBottom: "1px solid #444" }}>
+                    <button
+                      onClick={() => setDeletingUser(u)}
+                      style={{
+                        backgroundColor: "#e91313ff",
+                        color: "white",
+                        border: "none",
+                        padding: "6px 12px",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                      }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.backgroundColor = "#e91313ff")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.backgroundColor = "#e91313ff")
+                      }
+                    >
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -187,10 +234,27 @@ export default function UserTable({ dbName, users = [], onUpdate, onDBChange }) 
         <UserEditAlert
           user={editingUser}
           onSave={(updated) => {
-            onUpdate(updated);
+            if (!updated._id) {
+              // INSERT
+              onInsert && onInsert(updated);
+            } else {
+              // UPDATE
+              onUpdate && onUpdate(updated);
+            }
             setEditingUser(null);
           }}
           onClose={() => setEditingUser(null)}
+        />
+      )}
+
+      {deletingUser && (
+        <ConfirmDeleteAlert
+          itemName={deletingUser.name}
+          onConfirm={() => {
+            onDelete(deletingUser); // callback from props
+            setDeletingUser(null);
+          }}
+          onCancel={() => setDeletingUser(null)}
         />
       )}
 

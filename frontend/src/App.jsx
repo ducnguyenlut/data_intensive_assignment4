@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import "./App.css";
 
-import { fetchUsers, updateUser } from "./services/userService";
+import { fetchUsers, updateUser, deleteUser, insertUser } from "./services/userService";
 import { fetchProducts, updateProduct } from "./services/productService";
 import { fetchCategories, updateCategory } from "./services/categoryService";
 import { fetchOrders, updateOrder } from "./services/orderService";
@@ -15,22 +15,22 @@ import OrderTable from "./components/OrderTable";
 import ReviewTable from "./components/ReviewTable";
 
 export default function App() {
-  const [selectedDB, setSelectedDB] = useState("db1");
+  const [selectedDB, setSelectedDB] = useState("");
   const [users, setUsers] = useState([]);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [orders, setOrders] = useState([]);
   const [reviews, setReviews] = useState([]);
 
-  const [orderDB, setOrderDB] = useState("db1");
-  const [userDB, setUserDB] = useState("db1");
-  const [productDB, setProductDB] = useState("db1");
-  const [categoryDB, setCategoryDB] = useState("db1");
-  const [reviewDB, setReviewDB] = useState("db1");
+  const [orderDB, setOrderDB] = useState("");
+  const [userDB, setUserDB] = useState("");
+  const [productDB, setProductDB] = useState("");
+  const [categoryDB, setCategoryDB] = useState("");
+  const [reviewDB, setReviewDB] = useState("");
 
-  // 🟢 Auto-load db1 at first render
+  // 🟢 Auto-load nosql at first render
   useEffect(() => {
-    handleSelectDB("db1");
+    handleSelectDB("nosql");
   }, []);
 
   const handleSelectDB = async (dbName) => {
@@ -49,6 +49,7 @@ export default function App() {
         fetchOrders(dbName),
         fetchReviews(dbName),
       ]);
+      // console.log("Fetched users:", u); // 👈 log users array
       setUsers(u);
       setProducts(p);
       setCategories(c);
@@ -82,7 +83,7 @@ export default function App() {
     console.log(messages);
 
     // 4️⃣ Reload all data for UI
-    await handleSelectDB("db1"); // reload db1 by default for all tables
+    await handleSelectDB("nosql"); // reload nosql by default for all tables
 
     alert("All databases restored successfully!");
   } catch (err) {
@@ -97,6 +98,19 @@ export default function App() {
     const saved = await updateUser(userDB, o);
     setUsers((prev) => prev.map((x) => (x._id === saved._id ? saved : x)));
   };
+
+  // Delete user
+  const _deleteUser = async (o) => {
+    await deleteUser(userDB, o);
+    setUsers(prev => prev.filter(x => x._id !== o._id));
+  };
+
+  // Insert user
+  const _insertUser = async (o) => {
+    const newUser = await insertUser(userDB, o); 
+    setUsers((prev) => [...prev, newUser]);
+  };
+
 
   const _updateProduct = async (o) => {
     const saved = await updateProduct(productDB, o);
@@ -139,6 +153,8 @@ export default function App() {
           const data = await fetchUsers(o);
           setUsers(data);
         }}
+        onDelete={_deleteUser}
+        onInsert={_insertUser}
       />
 
       <ProductTable
