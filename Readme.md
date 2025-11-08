@@ -14,7 +14,7 @@ Then build and run the project using Docker Compose:
 docker-compose up --build
 ```
 
-This command will build the Docker images and start all containers. Once the containers are running, your backend API should be available at http://localhost:PORT (replace PORT with your actual backend port). You can interact with the databases via your frontend app or API calls.
+Using http://localhost:1000 to access database through web-browser
 
 When you are done, stop and remove all running containers using:
 ``` bash
