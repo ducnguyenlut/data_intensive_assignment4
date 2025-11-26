@@ -1,19 +1,3 @@
-# Multi-Database School Management System
-
-A full-stack application that seamlessly manages data across both SQL (PostgreSQL) and NoSQL (MongoDB) databases, with a transparent abstraction layer that hides the database complexity from users.
-
-## Features
-
-- **Dual Database Support**: PostgreSQL (SQL) and MongoDB (NoSQL)
-- **Transparent Database Operations**: Users don't need to know which database is being used
-- **CRUD Operations**: Create, Read, Update, Delete operations across both databases
-- **Data Viewing Options**: 
-  - View data from PostgreSQL separately
-  - View data from MongoDB separately
-  - View combined/joined data from similar tables across both databases
-- **Modern UI**: Beautiful, responsive React frontend
-- **Dockerized**: Fully containerized with Docker Compose
-
 ## Database Structure
 
 ### PostgreSQL (SQL Database)
