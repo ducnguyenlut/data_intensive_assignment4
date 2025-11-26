@@ -1,7 +1,5 @@
 import axios from 'axios';
 
-// For Docker, use backend service name; for local dev, use localhost
-// Since frontend runs in browser, it should always use localhost:3001
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
 const api = axios.create({
@@ -49,12 +47,29 @@ export const updateEntity = async (entityType, id, data) => {
   }
 };
 
-export const deleteEntity = async (entityType, id) => {
+export const deleteEntity = async (entityType, id, options = {}) => {
   try {
-    const response = await api.delete(`/${entityType}/${id}`);
+    const params = {};
+    if (options.cascade) {
+      params.cascade = 'true';
+    }
+    if (options.reassignTo !== undefined) {
+      params.reassignTo = options.reassignTo === null ? 'null' : options.reassignTo;
+    }
+    
+    const response = await api.delete(`/${entityType}/${id}`, { params });
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.error || 'Failed to delete entity');
+  }
+};
+
+export const restoreData = async (target = 'all') => {
+  try {
+    const response = await axios.post(`${API_URL}/admin/restore`, { target });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.error || 'Failed to restore data');
   }
 };
 

@@ -11,7 +11,7 @@ const ENTITY_TYPES = [
   { value: 'events', label: 'Events' },
 ];
 
-function DataForm() {
+function DataForm({ refreshKey = 0 }) {
   const [selectedEntity, setSelectedEntity] = useState('teachers');
   const [action, setAction] = useState('create');
   const [formData, setFormData] = useState({});
@@ -24,7 +24,7 @@ function DataForm() {
     if (action === 'update' || action === 'delete') {
       fetchItems();
     }
-  }, [selectedEntity, action]);
+  }, [selectedEntity, action, refreshKey]);
 
   const fetchItems = async () => {
     setLoading(true);
@@ -352,4 +352,8 @@ function DataForm() {
 }
 
 export default DataForm;
+
+
+
+
 

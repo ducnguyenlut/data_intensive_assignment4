@@ -23,6 +23,8 @@ A full-stack application that seamlessly manages data across both SQL (PostgreSQ
 4. **Students** - Student records
 5. **Enrollments** - Student-subject enrollments
 
+![PostgreSQL Schema](images/test_db.png)
+
 ### MongoDB (NoSQL Database)
 1. **Teachers** - Teacher information (similar to PostgreSQL)
 2. **Classes** - Class details (similar to PostgreSQL)
@@ -57,15 +59,14 @@ assignment4/
 ## Prerequisites
 
 - Docker and Docker Compose installed
-- At least 4GB of free RAM
 - Ports 3000, 3001, 5432, and 27017 available
 
 ## Getting Started
 
-### 1. Clone or navigate to the project directory
+### 1. Clone the project
 
 ```bash
-cd assignment4
+git clone https://github.com/ducnguyenlut/data_intensive_assignment4.git
 ```
 
 ### 2. Start all services with Docker Compose
@@ -98,33 +99,6 @@ To remove volumes (database data):
 docker-compose down -v
 ```
 
-## Usage
-
-### Viewing Data
-
-1. Click on **"View Data"** tab
-2. Select an entity type from the dropdown (Teachers, Classes, Students, etc.)
-3. Choose a view mode:
-   - **All Views**: Shows data from both databases separately and combined
-   - **PostgreSQL Only**: Shows only PostgreSQL data
-   - **MongoDB Only**: Shows only MongoDB data
-   - **Joined View**: Shows combined data from similar tables (available for Teachers, Classes, Students)
-
-### Managing Data
-
-1. Click on **"Manage Data"** tab
-2. Select an entity type
-3. Choose an action:
-   - **Create New**: Add new records (automatically routed to appropriate database)
-   - **Update Existing**: Modify existing records
-   - **Delete**: Remove records
-
-**Note**: The system automatically routes operations to the correct database:
-- Teachers, Classes, Students, Subjects, Enrollments → PostgreSQL
-- LibraryBooks, Events → MongoDB
-
-Users don't need to know which database is being used!
-
 ## API Endpoints
 
 ### Get Data
@@ -139,21 +113,6 @@ Users don't need to know which database is being used!
 
 ### Delete Data
 - `DELETE /api/:entityType/:id` - Delete entity (automatically routes to appropriate database)
-
-## Database Abstraction Layer
-
-The backend includes a `DatabaseService` that:
-- Automatically routes CRUD operations to the appropriate database
-- Handles schema differences between PostgreSQL and MongoDB
-- Combines results from similar tables across databases
-- Provides a unified API interface
-
-## Technologies Used
-
-- **Frontend**: React 18, Axios
-- **Backend**: Node.js, Express
-- **Databases**: PostgreSQL 15, MongoDB 7.0
-- **Containerization**: Docker, Docker Compose
 
 ## Troubleshooting
 
@@ -190,7 +149,7 @@ If ports are already in use, modify the port mappings in `docker-compose.yml`
 
 3. **Databases**: Start PostgreSQL and MongoDB separately
 
-## License
 
-This project is created for educational purposes.
+
+
 

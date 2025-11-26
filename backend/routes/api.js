@@ -73,7 +73,17 @@ router.put('/:entityType/:id', async (req, res) => {
 router.delete('/:entityType/:id', async (req, res) => {
   try {
     const { entityType, id } = req.params;
-    const result = await dbService.deleteEntity(entityType, id);
+    const { cascade, reassignTo } = req.query;
+    
+    const options = {};
+    if (cascade === 'true' || cascade === '1') {
+      options.cascade = true;
+    }
+    if (reassignTo !== undefined) {
+      options.reassignTo = reassignTo === 'null' ? null : parseInt(reassignTo);
+    }
+    
+    const result = await dbService.deleteEntity(entityType, id, options);
     if (result) {
       res.json({ 
         message: `${entityType} deleted successfully`,

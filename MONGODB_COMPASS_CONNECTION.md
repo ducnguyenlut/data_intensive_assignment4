@@ -59,3 +59,7 @@ After connecting, you should see these collections in the `school_db` database:
 - Make sure you're viewing the correct database
 - If collections are empty, check initialization logs: `docker-compose logs mongodb`
 
+
+
+
+

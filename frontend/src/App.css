@@ -254,6 +254,19 @@ table tr:hover {
   border: 1px solid #f5c6cb;
 }
 
+.popup-message {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #27ae60;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  font-weight: 600;
+}
+
 .loading {
   text-align: center;
   padding: 2rem;
@@ -271,4 +284,42 @@ table tr:hover {
   font-size: 1.1rem;
   margin-top: 1rem;
 }
+
+.btn-sm {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  margin-right: 0.3rem;
+  margin-top: 0;
+}
+
+.editing-row {
+  background-color: #fff9e6 !important;
+}
+
+.editing-row:hover {
+  background-color: #fff4d6 !important;
+}
+
+.inline-edit-input {
+  width: 100%;
+  padding: 0.4rem;
+  border: 2px solid #667eea;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.inline-edit-input:focus {
+  outline: none;
+  border-color: #5568d3;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+table td {
+  position: relative;
+}
+
+table td .btn-sm {
+  white-space: nowrap;
+}
+
 

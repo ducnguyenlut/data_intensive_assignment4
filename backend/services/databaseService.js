@@ -16,8 +16,41 @@ class DatabaseService {
       // Get from PostgreSQL
       if (['teachers', 'classes', 'students', 'subjects', 'enrollments'].includes(entityType)) {
         try {
-          const tableName = this.getTableName(entityType);
-          const query = `SELECT * FROM ${tableName}`;
+          let query;
+          // For subjects, join with teachers to get teacher name
+          if (entityType === 'subjects') {
+            query = `
+              SELECT s.*, 
+                     t.first_name || ' ' || t.last_name AS teacher_name
+              FROM Subjects s
+              LEFT JOIN Teachers t ON s.teacher_id = t.teacher_id
+            `;
+          }
+          // For classes, join with teachers to get teacher name
+          else if (entityType === 'classes') {
+            query = `
+              SELECT c.*, 
+                     t.first_name || ' ' || t.last_name AS teacher_name
+              FROM Classes c
+              LEFT JOIN Teachers t ON c.teacher_id = t.teacher_id
+            `;
+          }
+          // For enrollments, join with students and subjects to get names
+          else if (entityType === 'enrollments') {
+            query = `
+              SELECT e.*,
+                     s.first_name || ' ' || s.last_name AS student_name,
+                     sub.subject_name
+              FROM Enrollments e
+              LEFT JOIN Students s ON e.student_id = s.student_id
+              LEFT JOIN Subjects sub ON e.subject_id = sub.subject_id
+            `;
+          }
+          // For other entities, use simple SELECT
+          else {
+            const tableName = this.getTableName(entityType);
+            query = `SELECT * FROM ${tableName}`;
+          }
           const pgResult = await pgPool.query(query);
           results.postgres = pgResult.rows;
         } catch (error) {
@@ -32,8 +65,22 @@ class DatabaseService {
           const collectionName = this.getCollectionName(entityType);
           const mongoDb = getMongoDb();
           if (mongoDb) {
-            const mongoResult = await mongoDb.collection(collectionName).find({}).toArray();
-            results.mongodb = mongoResult;
+            let mongoResult = await mongoDb.collection(collectionName).find({}).toArray();
+            if (entityType === 'teachers') {
+              mongoResult = mongoResult.map(({ department, ...rest }) => rest);
+            }
+            if (entityType === 'classes' && mongoResult.length > 0) {
+              const teacherDocs = await mongoDb.collection('Teachers').find({}).toArray();
+              const teacherMap = new Map(
+                teacherDocs.map(t => [t.teacher_id, `${t.first_name} ${t.last_name}`])
+              );
+              results.mongodb = mongoResult.map(cls => ({
+                ...cls,
+                teacher_name: teacherMap.get(cls.teacher_id) || null,
+              }));
+            } else {
+              results.mongodb = mongoResult;
+            }
           }
         } catch (error) {
           console.error(`MongoDB error for ${entityType}:`, error.message);
@@ -54,8 +101,22 @@ class DatabaseService {
   }
 
   // Insert entity - automatically routes to appropriate database
-  async insertEntity(entityType, data) {
+  async insertEntity(entityType, data = {}) {
     try {
+      let targetDb = null;
+      if (data.__db) {
+        targetDb = data.__db;
+        delete data.__db;
+      }
+
+      if (targetDb === 'mongo') {
+        return await this.insertMongoDB(entityType, data);
+      }
+
+      if (targetDb === 'postgres') {
+        return await this.insertPostgreSQL(entityType, data);
+      }
+
       // For entities that exist in both databases, check for MongoDB-specific fields
       if (['teachers', 'classes', 'students'].includes(entityType)) {
         const mongoSpecificFields = this.getMongoSpecificFields(entityType);
@@ -87,10 +148,13 @@ class DatabaseService {
   }
 
   // Delete entity - automatically routes to appropriate database
-  async deleteEntity(entityType, id) {
+  async deleteEntity(entityType, id, options = {}) {
     try {
       // For entities that exist in both databases, try MongoDB first, then PostgreSQL
       if (['teachers', 'classes', 'students'].includes(entityType)) {
+        let deletedMongo = null;
+        let deletedPostgres = null;
+
         const mongoDb = getMongoDb();
         if (mongoDb) {
           const collectionName = this.getCollectionName(entityType);
@@ -98,15 +162,20 @@ class DatabaseService {
           const mongoRecord = await mongoDb.collection(collectionName).findOne({ [idField]: parseInt(id) });
           
           if (mongoRecord) {
-            return await this.deleteMongoDB(entityType, id);
+            deletedMongo = await this.deleteMongoDB(entityType, id);
           }
         }
-        // If not found in MongoDB, try PostgreSQL
-        return await this.deletePostgreSQL(entityType, id);
+        // Attempt PostgreSQL deletion regardless of Mongo outcome
+        deletedPostgres = await this.deletePostgreSQL(entityType, id, options);
+
+        if (deletedMongo || deletedPostgres) {
+          return deletedPostgres || deletedMongo;
+        }
+        return null;
       }
       // Route to PostgreSQL for: subjects, enrollments
       else if (['subjects', 'enrollments'].includes(entityType)) {
-        return await this.deletePostgreSQL(entityType, id);
+        return await this.deletePostgreSQL(entityType, id, options);
       }
       // Route to MongoDB for: librarybooks, events
       else if (['librarybooks', 'events'].includes(entityType)) {
@@ -203,19 +272,120 @@ class DatabaseService {
     return result.rows[0];
   }
 
-  async deletePostgreSQL(entityType, id) {
+  async deletePostgreSQL(entityType, id, options = {}) {
     const tableName = this.getTableName(entityType);
     const idColumn = this.getIdColumn(entityType);
+    const { cascade = false, reassignTo = undefined } = options;
+    
+    // Check for foreign key dependencies before deletion
+    if (entityType === 'teachers') {
+      // Check if teacher is referenced in Classes or Subjects
+      const classesCheck = await pgPool.query(
+        'SELECT COUNT(*) as count FROM Classes WHERE teacher_id = $1',
+        [id]
+      );
+      const subjectsCheck = await pgPool.query(
+        'SELECT COUNT(*) as count FROM Subjects WHERE teacher_id = $1',
+        [id]
+      );
+      
+      const classesCount = parseInt(classesCheck.rows[0].count);
+      const subjectsCount = parseInt(subjectsCheck.rows[0].count);
+      
+      if (classesCount > 0 || subjectsCount > 0) {
+        if (cascade) {
+          
+          if (classesCount > 0) {
+            await pgPool.query('DELETE FROM Classes WHERE teacher_id = $1', [id]);
+          }
+          if (subjectsCount > 0) {
+            await pgPool.query('DELETE FROM Subjects WHERE teacher_id = $1', [id]);
+          }
+        } else if (reassignTo !== null && reassignTo !== undefined) {
+          
+          if (classesCount > 0) {
+            await pgPool.query('UPDATE Classes SET teacher_id = $1 WHERE teacher_id = $2', [reassignTo, id]);
+          }
+          if (subjectsCount > 0) {
+            await pgPool.query('UPDATE Subjects SET teacher_id = $1 WHERE teacher_id = $2', [reassignTo, id]);
+          }
+        } else if (reassignTo === null) {
+          
+          if (classesCount > 0) {
+            await pgPool.query('UPDATE Classes SET teacher_id = NULL WHERE teacher_id = $1', [id]);
+          }
+          if (subjectsCount > 0) {
+            await pgPool.query('UPDATE Subjects SET teacher_id = NULL WHERE teacher_id = $1', [id]);
+          }
+        } else {
+          
+          const dependencies = [];
+          if (classesCount > 0) dependencies.push(`${classesCount} class(es)`);
+          if (subjectsCount > 0) dependencies.push(`${subjectsCount} subject(s)`);
+          throw new Error(`Cannot delete teacher: This teacher is assigned to ${dependencies.join(' and ')}. Please reassign or remove these records first.`);
+        }
+      }
+    } else if (entityType === 'classes') {
+      // Check if class has students
+      const studentsCheck = await pgPool.query(
+        'SELECT COUNT(*) as count FROM Students WHERE class_id = $1',
+        [id]
+      );
+      const studentsCount = parseInt(studentsCheck.rows[0].count);
+      
+      if (studentsCount > 0) {
+        if (cascade) {
+          await pgPool.query('DELETE FROM Students WHERE class_id = $1', [id]);
+        } else if (reassignTo !== null && reassignTo !== undefined) {
+          await pgPool.query('UPDATE Students SET class_id = $1 WHERE class_id = $2', [reassignTo, id]);
+        } else if (reassignTo === null) {
+          await pgPool.query('UPDATE Students SET class_id = NULL WHERE class_id = $1', [id]);
+        } else {
+          throw new Error(`Cannot delete class: This class has ${studentsCount} student(s). Please reassign or remove these students first.`);
+        }
+      }
+    } else if (entityType === 'students') {
+      
+      const enrollmentsCheck = await pgPool.query(
+        'SELECT COUNT(*) as count FROM Enrollments WHERE student_id = $1',
+        [id]
+      );
+      const enrollmentsCount = parseInt(enrollmentsCheck.rows[0].count);
+      
+      if (enrollmentsCount > 0) {
+        if (cascade) {
+          await pgPool.query('DELETE FROM Enrollments WHERE student_id = $1', [id]);
+        } else {
+          throw new Error(`Cannot delete student: This student has ${enrollmentsCount} enrollment(s). Please remove these enrollments first or use cascade delete.`);
+        }
+      }
+    } else if (entityType === 'subjects') {
+
+      const enrollmentsCheck = await pgPool.query(
+        'SELECT COUNT(*) as count FROM Enrollments WHERE subject_id = $1',
+        [id]
+      );
+      const enrollmentsCount = parseInt(enrollmentsCheck.rows[0].count);
+      
+      if (enrollmentsCount > 0) {
+        if (cascade) {
+          await pgPool.query('DELETE FROM Enrollments WHERE subject_id = $1', [id]);
+        } else {
+          throw new Error(`Cannot delete subject: This subject has ${enrollmentsCount} enrollment(s). Please remove these enrollments first or use cascade delete.`);
+        }
+      }
+    }
+    
     const query = `DELETE FROM ${tableName} WHERE ${idColumn} = $1 RETURNING *`;
     const result = await pgPool.query(query, [id]);
-    return result.rows[0];
+    return result.rows[0] || null;
   }
 
   async updatePostgreSQL(entityType, id, data) {
     const tableName = this.getTableName(entityType);
     const idColumn = this.getIdColumn(entityType);
     
-    // Make sure we have data to update
+
     if (!data || Object.keys(data).length === 0) {
       return null;
     }
@@ -226,11 +396,11 @@ class DatabaseService {
     const values = [id, ...Object.values(data)];
     const result = await pgPool.query(query, values);
     
-    // Return the updated row, or null if no rows were updated
+
     return result.rows[0] || null;
   }
 
-  // MongoDB operations
+
   async insertMongoDB(entityType, data) {
     const collectionName = this.getCollectionName(entityType);
     const mongoDb = getMongoDb();
@@ -260,19 +430,18 @@ class DatabaseService {
       throw new Error('MongoDB connection not available');
     }
     
-    // Try to update the document
+
     const updateResult = await mongoDb.collection(collectionName).findOneAndUpdate(
       { [idField]: parseInt(id) },
       { $set: data },
       { returnDocument: 'after' }
     );
     
-    // If result.value is null, the document wasn't found
     if (!updateResult.value) {
-      // Try alternative ID formats (string vs number)
+ 
       const docById = await mongoDb.collection(collectionName).findOne({ [idField]: id });
       if (docById) {
-        // Document exists with string ID, update it
+
         const result2 = await mongoDb.collection(collectionName).findOneAndUpdate(
           { [idField]: id },
           { $set: data },
@@ -333,10 +502,8 @@ class DatabaseService {
   }
 
   combineResults(pgResults, mongoResults, entityType) {
-    // Combine results from both databases, handling different schemas
     const combined = [];
     
-    // Add PostgreSQL results
     pgResults.forEach(item => {
       combined.push({
         source: 'PostgreSQL',
@@ -356,17 +523,15 @@ class DatabaseService {
     return combined;
   }
 
-  // Get MongoDB-specific fields for each entity type
   getMongoSpecificFields(entityType) {
     const mapping = {
-      'teachers': ['department'],
+      'teachers': [],
       'classes': ['schedule'],
       'students': ['enrollment_year']
     };
     return mapping[entityType] || [];
   }
 
-  // Filter out MongoDB-only fields for PostgreSQL updates
   filterPostgresFields(entityType, data) {
     const mongoFields = this.getMongoSpecificFields(entityType);
     const filtered = { ...data };

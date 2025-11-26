@@ -1,12 +1,5 @@
-// MongoDB Database Initialization
-
-// Switch to school_db database
-// Note: Init scripts run with full privileges, no auth needed
 db = db.getSiblingDB('school_db');
 
-// Create collections with sample data
-
-// 1. Teachers Collection (similar to PostgreSQL)
 db.Teachers.insertMany([
   {
     teacher_id: 1,
@@ -14,8 +7,7 @@ db.Teachers.insertMany([
     last_name: 'Smith',
     email: 'john.smith@school.com',
     phone_number: '555-0101',
-    hire_date: new Date('2020-01-15'),
-    department: 'Mathematics'
+    hire_date: new Date('2020-01-15')
   },
   {
     teacher_id: 2,
@@ -23,8 +15,7 @@ db.Teachers.insertMany([
     last_name: 'Johnson',
     email: 'sarah.johnson@school.com',
     phone_number: '555-0102',
-    hire_date: new Date('2019-03-20'),
-    department: 'English'
+    hire_date: new Date('2019-03-20')
   },
   {
     teacher_id: 3,
@@ -32,8 +23,7 @@ db.Teachers.insertMany([
     last_name: 'Brown',
     email: 'michael.brown@school.com',
     phone_number: '555-0103',
-    hire_date: new Date('2021-09-01'),
-    department: 'Physics'
+    hire_date: new Date('2021-09-01')
   },
   {
     teacher_id: 4,
@@ -41,8 +31,7 @@ db.Teachers.insertMany([
     last_name: 'Davis',
     email: 'emily.davis@school.com',
     phone_number: '555-0104',
-    hire_date: new Date('2018-05-10'),
-    department: 'History'
+    hire_date: new Date('2018-05-10')
   },
   {
     teacher_id: 5,
@@ -50,8 +39,7 @@ db.Teachers.insertMany([
     last_name: 'Wilson',
     email: 'david.wilson@school.com',
     phone_number: '555-0105',
-    hire_date: new Date('2022-01-15'),
-    department: 'Chemistry'
+    hire_date: new Date('2022-01-15')
   }
 ]);
 
@@ -61,36 +49,31 @@ db.Classes.insertMany([
     class_id: 1,
     class_name: 'Mathematics 101',
     teacher_id: 1,
-    room_number: 'A101',
-    schedule: 'Mon, Wed, Fri 9:00 AM'
+    room_number: 'A101'
   },
   {
     class_id: 2,
     class_name: 'English Literature',
     teacher_id: 2,
-    room_number: 'B205',
-    schedule: 'Tue, Thu 10:00 AM'
+    room_number: 'B205'
   },
   {
     class_id: 3,
     class_name: 'Physics 201',
     teacher_id: 3,
-    room_number: 'C301',
-    schedule: 'Mon, Wed 2:00 PM'
+    room_number: 'C301'
   },
   {
     class_id: 4,
     class_name: 'History 101',
     teacher_id: 4,
-    room_number: 'D102',
-    schedule: 'Tue, Thu 1:00 PM'
+    room_number: 'D102'
   },
   {
     class_id: 5,
     class_name: 'Chemistry 101',
     teacher_id: 5,
-    room_number: 'E201',
-    schedule: 'Mon, Wed, Fri 11:00 AM'
+    room_number: 'E201'
   }
 ]);
 
@@ -153,7 +136,7 @@ db.Students.insertMany([
   }
 ]);
 
-// 4. LibraryBooks Collection (different - MongoDB only)
+
 db.LibraryBooks.insertMany([
   {
     book_id: 1,
@@ -202,7 +185,7 @@ db.LibraryBooks.insertMany([
   }
 ]);
 
-// 5. Events Collection (different - MongoDB only)
+
 db.Events.insertMany([
   {
     event_id: 1,
@@ -251,7 +234,6 @@ db.Events.insertMany([
   }
 ]);
 
-// Create indexes for better performance
 db.Teachers.createIndex({ teacher_id: 1 });
 db.Classes.createIndex({ class_id: 1 });
 db.Students.createIndex({ student_id: 1 });

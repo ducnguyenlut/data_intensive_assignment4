@@ -102,3 +102,7 @@ INSERT INTO Enrollments (student_id, subject_id, enrollment_date, grade) VALUES
 (7, 7, '2024-01-15', 'A'),
 (8, 8, '2024-01-15', 'B');
 
+
+
+
+

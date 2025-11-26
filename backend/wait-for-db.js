@@ -1,4 +1,3 @@
-// Simple script to wait for databases to be ready
 const { Pool } = require('pg');
 const { MongoClient } = require('mongodb');
 
@@ -59,4 +58,8 @@ const waitForDatabases = async () => {
 };
 
 waitForDatabases();
+
+
+
+
 

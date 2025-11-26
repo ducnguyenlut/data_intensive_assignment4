@@ -3,6 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const apiRoutes = require('./routes/api');
+const adminRoutes = require('./routes/admin');
 const { getMongoDb } = require('./config/database');
 
 const app = express();
@@ -15,8 +16,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api', apiRoutes);
+app.use('/admin', adminRoutes);
 
-// Health check
 app.get('/health', async (req, res) => {
   try {
     const mongoDb = getMongoDb();
